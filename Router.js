@@ -88,8 +88,8 @@
          }
        }
      }
-     if (!fired){
-       final(response, url);
+     if (!exit){
+       final(url, response);
      }
    }
 
