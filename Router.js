@@ -81,8 +81,8 @@
      while (!exit && !last.done){
        last = iter.next();
        if (!last.done){
-         if (url.test(last.value.regex)){
-           let match = last.value.regex.match(url);
+         if (last.value.regex.test(url)){
+           let match = url.match(last.value.regex);
            last.value.callback(url, response, match);
            exit = true;
          }
