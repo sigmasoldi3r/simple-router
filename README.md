@@ -88,7 +88,7 @@ let users = {
   "fooing": "baring"
 };
 
-router.when(/^\/users\/([^\/]+)/g, (url, response, match) => {
+router.when(/^\/users\/([^\/]+$)/, (url, response, match) => {
 
   let usr = users[match[1]];
 
@@ -109,10 +109,18 @@ router.when(/^\/users\/([^\/]+)/g, (url, response, match) => {
 
 `when(regExp, callback)`
 
-__regExp__: The regular expression to match. I personally recommend to use
-a regular expression that follows this pattern: `/^\/...$/g`, because you
+__regExp__: The regular expression to match.
+
+I personally recommend to use
+a regular expression that follows this pattern: `/^\/...$/`, because you
 ensure that the regular expression will match the whole route (Thanks to the
-anchor characters `^` and `$`), plus all routes start with a forward slash.
+anchor characters `^` and `$`). Global flag will not match the whole route if
+you're using captures, so use the anchor characters.
+
+If you enable the global flag `/.*/g` and use the anchors `/^.*$/` at the same
+time, it __will not__ match any _URL_! So beware.
+
+All routes shall start with a forward slash.
 
 __callback__: The function that will be called on route match. The arguments are
 : `(url, response, match)`
