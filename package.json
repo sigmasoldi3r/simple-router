@@ -3,6 +3,7 @@
   "version": "1.0.3",
   "description": "A simple router that uses regular expressions to match URLs.",
   "main": "Router.js",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/sigmasoldi3r/simple-router"
