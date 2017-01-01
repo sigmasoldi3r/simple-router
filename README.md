@@ -10,7 +10,8 @@ callbacks.
 
 This module was born with the idea of personal use only, because I needed
 something that could easily define a certain logic for server routes without
-having an huge amount of `if...else` blocks.
+having an huge amount of `if...else` blocks. Now, seeing that the module is
+being used I've decided to write down a readme.
 
 * * *
 
@@ -26,14 +27,14 @@ Then, all what you have to do is define some routes, using the `.when(...)`
 and `.final(...)` method:
 ```js
 router
-.when(/^\/getPlayers\/(.+)$/, (url, response, match) => {
+.when(/^\/getPlayers\/(.+)$/, (url, [request,] response, match) => {
 
   response.writeHead(200, {'Content-Type': 'text/plain'});
   response.write(`Player requested: ${match[1]}`);
   response.end();
 
 })
-.final((url, response) => {
+.final((url, [request,] response) => {
 
   response.writeHead(404, {'Content-Type': 'text/plain'});
   response.end(`Unknown action ${url}`);
@@ -41,7 +42,7 @@ router
 });
 ```
 
-Then, in your __HTTP__ server _callback_, use the `router.listen(url, response)`
+Then, in your __HTTP__ server _callback_, use the `router.listen(url, [request,] response)`
 method call, like this:
 ```js
 const PORT = 80;
@@ -49,7 +50,7 @@ const PORT = 80;
 http.createServer((request, response) => {
 
   // No more logic here folks!
-  router.listen(request.url, response);
+  router.listen(request.url, [request,] response);
 
 }).listen(PORT, () => {
     console.log(`Server listening on: http://localhost:${PORT}`);
@@ -72,7 +73,7 @@ require('./APageRoute.js');
 
 http.createServer((request, response) => {
 
-  router.listen(request.url, response);
+  router.listen(request.url, [request,] response);
 
 }).listen(80);
 ```
@@ -88,7 +89,7 @@ let users = {
   "fooing": "baring"
 };
 
-router.when(/^\/users\/([^\/]+$)/, (url, response, match) => {
+router.when(/^\/users\/([^\/]+$)/, (url, [request,] response, match) => {
 
   let usr = users[match[1]];
 
@@ -123,11 +124,11 @@ time, it __will not__ match any _URL_! So beware.
 All routes shall start with a forward slash.
 
 __callback__: The function that will be called on route match. The arguments are
-: `(url, response, match)`
+: `(url, [request,] response, match)`
 
 ## Router.prototype.final
 
 `final(callback)`
 
 __callback__: The function that will be called when no route is matched.
-The arguments are: `(url, response)`
+The arguments are: `(url, [request,] response)`
