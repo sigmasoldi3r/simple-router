@@ -34,10 +34,12 @@ class Handler {
 * The router module grants you a routing system using regexp.
 * Is like using if ... else if ... else with regexp.
 */
-function Router(){
+class Router {
 
- let routes = [];
- let final = () => {};
+ constructor(){
+   this.__routes = [];
+   this.__final = () => {};
+ }
 
  /**
   * Called when the router wants to handle an incoming connection.
@@ -45,58 +47,74 @@ function Router(){
   * That means that if the next callback is not a 'if' the regular expression
   * is not even tested.
   */
- this.when = (regex, callback) => {
-   routes.push(new Handler(regex, callback, false));
+ when(regex, callback) {
+   this.__routes.push(new Handler(regex, callback, false));
    return this;
  };
 
  /**
   * Those are tested even if the previous regex was true.
+  [NEXT VERSION IMPL]
   */
- /*this.if = (regex, callback) => {
-   routes.push(new Handler(regex, callback, true));
+ /*this.also = (regex, callback) => {
+   this.__routes.push(new Handler(regex, callback, true));
    return this;
  };*/
 
  /**
   * This is called if noone of the when routes has been matched.
   */
- this.final = (handler) => {
-   final = handler;
+ final(handler) {
+   this.__final = handler;
  };
 
  /**
-  * This function gets an iterator for the callback sequence.
-  * This iterator.
+  * Now this iterator gives us only routes while either: Noone was matched or
+  * the next incoming routes are passable. [NEXT VERSION IMPL]
   */
- function* getRoutesIterator(){
-   //let exit = false;
-   //let ai = 0;
-   yield* [...routes];
-   /*while (!exit){
-     let it go xdddddd
-   }*/
+  getRoutesIterator(url){
+    const self = this;
+    return (function*(url){
+      yield* [...self.__routes];
+    })(url);
+    /*let exit = false;
+    let i = 0;
+    while (!exit){
+
+     yield this.__routes[i++];
+    }*/
  }
 
  /**
   * Call this when do you want to apply a route to an incoming URL.
+  * Deprecation warning!
+  * Now request & response has backwards compatibility with only response.
+  * The next version will drop this backwards compatibility.
   */
- this.listen = (url, response) => {
+ listen(url, request, response) {
    let exit = false;
-   let iter = getRoutesIterator();
+   let routes = this.getRoutesIterator(url);
    let last = {done: false};
    while (!exit && !last.done){
-     last = iter.next();
+     last = routes.next();
      if (!last.done){
        if (last.value.regex.test(url)){
          let match = url.match(last.value.regex);
-         last.value.callback(url, response, match);
+         if (typeof response === 'undefined'){
+           last.value.callback(url, request, match);
+         } else {
+           last.value.callback(url, request, response, match);
+         }
          exit = true;
        }
      }
    }
    if (!exit){
-     final(url, response);
+     if (typeof response === 'undefined'){
+       this.__final(url, request);
+     } else {
+       this.__final(url, request, response);
+     }
    }
  }
 
