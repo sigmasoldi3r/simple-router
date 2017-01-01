@@ -18,14 +18,12 @@ DEALINGS IN THE SOFTWARE.
 * This is an atomic hanler.
 * Those store simple data as the callback.
 */
-class Handler {
+class Route {
 
-  constructor(regex, callback, passable){
+  constructor(regex, callback){
     this.callback = callback;
     this.regex = regex;
-    this.isPassable = () => {
-      return passable;
-    };
+    this.children = [];
   }
 
 }
@@ -39,6 +37,7 @@ class Router {
  constructor(){
    this.__routes = [];
    this.__final = () => {};
+   this.__topWhen = null;
  }
 
  /**
@@ -48,18 +47,29 @@ class Router {
   * is not even tested.
   */
  when(regex, callback) {
-   this.__routes.push(new Handler(regex, callback, false));
+   let route = new Route(regex, callback);
+   this.__topWhen = route;
+   this.__routes.push(route);
    return this;
  };
 
  /**
-  * Those are tested even if the previous regex was true.
-  [NEXT VERSION IMPL]
+  * This will get the last when that has been added to the chain.
   */
- /*this.also = (regex, callback) => {
-   this.__routes.push(new Handler(regex, callback, true));
+ getTopWhen() {
+   return this.__topWhen;
+ }
+
+ /**
+  * Those are tested even if the previous regex was true.
+  * Must be chained after a '.when(...)' call.
+  */
+ also (regex, callback) {
+   let top = this.getTopWhen();
+   if (top === null) throw new Exception("An 'also()' must be chained after a 'when()'! Saw .also(...) but no preceding .when(...)");
+   top.children.push(new Route(regex, callback));
    return this;
- };*/
+ };
 
  /**
   * This is called if noone of the when routes has been matched.
@@ -69,20 +79,15 @@ class Router {
  };
 
  /**
-  * Now this iterator gives us only routes while either: Noone was matched or
-  * the next incoming routes are passable. [NEXT VERSION IMPL]
+  * This function returns the first matching '.when()' or the '.final()' if no
+  * matching route found.
   */
-  getRoutesIterator(url){
-    const self = this;
-    return (function*(url){
-      yield* [...self.__routes];
-    })(url);
-    /*let exit = false;
-    let i = 0;
-    while (!exit){
-
-     yield this.__routes[i++];
-    }*/
+  getMatchingRoute(url){
+    for (let route of this.__routes){
+      if (route.regex.test(url))
+        return {callback: route.callback, regex: route.regex, children: route.children};
+    }
+    return {callback: this.__final, children: []};
  }
 
  /**
@@ -91,32 +96,26 @@ class Router {
   * Now request & response has backwards compatibility with only response.
   * The next version will drop this backwards compatibility.
   */
- listen(url, request, response) {
-   let exit = false;
-   let routes = this.getRoutesIterator(url);
-   let last = {done: false};
-   while (!exit && !last.done){
-     last = routes.next();
-     if (!last.done){
-       if (last.value.regex.test(url)){
-         let match = url.match(last.value.regex);
-         if (typeof response === 'undefined'){
-           last.value.callback(url, request, match);
-         } else {
-           last.value.callback(url, request, response, match);
-         }
-         exit = true;
-       }
-     }
-   }
-   if (!exit){
-     if (typeof response === 'undefined'){
-       this.__final(url, request);
-     } else {
-       this.__final(url, request, response);
-     }
-   }
- }
+  listen(url, request, response) {
+    let route = this.getMatchingRoute(url);
+    let match;
+    if (typeof route.regex !== 'undefined'){
+      match = url.match(route.regex);
+    }
+    if (typeof response === 'undefined'){
+      route.callback(url, request, match);
+      route.children.forEach((sub) => {
+        if (url.match(sub.regex))
+          sub.callback(url, request, match);
+      });
+    } else {
+      route.callback(url, request, response, match);
+      route.children.forEach((sub) => {
+        if (url.match(sub.regex))
+          sub.callback(url, request, response, match);
+      });
+    }
+  }
 
 };
 
