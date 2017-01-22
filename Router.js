@@ -148,14 +148,16 @@ class Router {
   listen(req, res) {
     let m = false;
     this.__routes.forEach((r) => {
-      let test = r.regex.test(req.url);
-      let noSize = r.allowedMethods.length === 0;
-      if (test && noSize){
-        m = true;
-        r.fire(req, res);
-      } else if (test && r.allowedMethods.some((m) => m === req.method)) {
-        m = true;
-        r.fire(req, res);
+      if (!m) {
+        let test = r.regex.test(req.url);
+        let noSize = r.allowedMethods.length === 0;
+        if (test && noSize){
+          m = true;
+          r.fire(req, res);
+        } else if (test && r.allowedMethods.some((m) => m === req.method)) {
+          m = true;
+          r.fire(req, res);
+        }
       }
     });
     if (!m) {
