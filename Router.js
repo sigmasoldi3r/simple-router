@@ -134,6 +134,13 @@ class Router {
    this.__final = handler;
  };
 
+ /**
+  * Sugar for finally.
+  */
+ final(handler){
+   this.finally(handler);
+ }
+
 
  /**
   * This applies all the registered routes to the incoming request.
