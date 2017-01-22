@@ -1,134 +1,102 @@
-# Router
-## NodeJS module
-
-__Router__ for *NodeJS* is a minimalistic Routing plugin.
-
-Using *regular expressions* like `/^\/a-literal-route$/` you can trigger certain
-callbacks.
-
-#### Background
-
-This module was born with the idea of personal use only, because I needed
-something that could easily define a certain logic for server routes without
-having an huge amount of `if...else` blocks. Now, seeing that the module is
-being used I've decided to write down a readme.
+# Router 2
+A simple NodeJS server routing system.
 
 * * *
 
-## Usage
-### Basic tutorial
+This is a very simple routing system for your NodeJS _RESTy_ apps, tested
+mainly with the **http** module.
 
-Import the Router, this will give you a new instance of the `Router` Object:
-```js
-const router = require('Router');
+**Important Note**: As of version 2, there's almost no backwards compatibility
+with versions prior to it (Last was 1.3.0), so if you don't want to upgrade your
+project, better force version 1.3.0! Also the functionality of `.also` has been
+dropped for now.
+
+# Basic usage
+## Chaining method
+
+You can include a router instance globally like:
+```JS
+global.Router = require('Router');
 ```
 
-Then, all what you have to do is define some routes, using the `.when(...)`
-and `.final(...)` method:
-```js
-router
-.when(/^\/getPlayers\/(.+)$/, (url, [request,] response, match) => {
-
-  response.writeHead(200, {'Content-Type': 'text/plain'});
-  response.write(`Player requested: ${match[1]}`);
-  response.end();
-
+Then, you can define few routes in lately included files, or in the same file:
+```JS
+//You could specify a raw regex, but you will have to specify the anchor characters!
+Router.when("/home", (req, res, m) => {
+  res.end("Hey! You're in '/home'!");
 })
-.final((url, [request,] response) => {
-
-  response.writeHead(404, {'Content-Type': 'text/plain'});
-  response.end(`Unknown action ${url}`);
-
+//You can specify the method to match, so if you specify this route but the method does not match, it will be ignored.
+.when("/putSomething/(.+)", ['PUT'], (req, res, m) => {
+  res.end(`Hehe, we're going to put ${m[1]}`);
+})
+//Final is now ".finally()" but .final is maintained as sugar syntax for finally.
+.finally((req, res) => {
+  res.writeHead(404, {'Content-Type': 'plain/text'});
+  res.end("Sorry, nothing found :(");
 });
 ```
+If you want to pass a raw _RegExp_ you can, like: `Router.when(/^\/home$/, ...)`
 
-Then, in your __HTTP__ server _callback_, use the `router.listen(url, [request,] response)`
-method call, like this:
-```js
-const PORT = 80;
+Note the `^` and `$`, they are automatically added when you pass a string, but
+in regex you have to define them explicitly.
 
-http.createServer((request, response) => {
+## Hooking method
 
-  // No more logic here folks!
-  router.listen(request.url, [request,] response);
+Want to use classes? No problem, use hooks! `Router.$()`
+```JS
+class Actrl {
 
-}).listen(PORT, () => {
-    console.log(`Server listening on: http://localhost:${PORT}`);
-});
-```
-
-### Global Routing
-
-If you want to define a `.when(...)` anywhere, in other files, all what you have
-to do is require the `GlobalRouter` module in your main file, this will expose
-a __router__ object _globally_.
-
-Let's supouse that this is your main file:
-```js
-'use strict'
-// Import them.
-const http = require('http');
-require('GlobalRouter');
-require('./APageRoute.js');
-
-http.createServer((request, response) => {
-
-  router.listen(request.url, [request,] response);
-
-}).listen(80);
-```
-
-Then, your __APageRoute.js__ file can look like this:
-```js
-'use strict'
-//This is my page.
-
-let users = {
-  "foo": "bar",
-  "bar": "foobar",
-  "fooing": "baring"
-};
-
-router.when(/^\/users\/([^\/]+$)/, (url, [request,] response, match) => {
-
-  let usr = users[match[1]];
-
-  if (typeof usr === 'undefined'){
-    response.writeHead(400, {'Content-Type': 'plain/text'});
-    response.end(`Unknown user ${match[1]}`);
-  } else {
-    response.writeHead(200, {'Content-Type': 'plain/text'});
-    response.end(usr);
+  static aRoute(req, m) {
+    return "Hehe, a route!";
   }
 
-});
+}
+Router.$("/home", Actrl.aRoute);
+```
+Easy huh? Remember that `$` is a syntactic sugar for `Router.hook`.
+
+You can use **non-static** methods also:
+```JS
+class A {
+  constructor(prop){
+    this.prop = prop;
+    Router.$("/lol", this.lol);
+  }
+  lol(req, m){
+    return `Here your controller instance holds ${this.prop} property!`;
+  }
+}
+let a = new A(); //...
 ```
 
-# Reference
+If you return a string, the default header is sent
+`{'Content-Type': 'plain/text'}` and the code is `200`.
 
-## Router.prototype.when
+You can change this returning an object:
+```JS
+{
+  code: 200,
+  head: {
+    {'Content-Type': 'text/html'}
+  },
+  data: `Hey! <b>Bold</b> stoopid html <i>haha</i>`
+}
+```
+All fields are optional. If you return an object with only data and this data
+is an object, the server will respond a **200** code with **application/json**
+content type and the object will be stringified:
+```JS
+{data: {
+  "a": "json",
+  "is": [
+    "cool",
+    "very cool"
+  ]
+}}
+```
 
-`when(regExp, callback)`
+With the `Es7` spec there will be included the function decorators that use a
+similar syntax to java's annotations `@someDec(asdasd)` but untill now you will have
+to stick to `Router.$`.
 
-__regExp__: The regular expression to match.
-
-I personally recommend to use
-a regular expression that follows this pattern: `/^\/...$/`, because you
-ensure that the regular expression will match the whole route (Thanks to the
-anchor characters `^` and `$`). Global flag will not match the whole route if
-you're using captures, so use the anchor characters.
-
-If you enable the global flag `/.*/g` and use the anchors `/^.*$/` at the same
-time, it __will not__ match any _URL_! So beware.
-
-All routes shall start with a forward slash.
-
-__callback__: The function that will be called on route match. The arguments are
-: `(url, [request,] response, match)`
-
-## Router.prototype.final
-
-`final(callback)`
-
-__callback__: The function that will be called when no route is matched.
-The arguments are: `(url, [request,] response)`
+For more examples, see _/examples_ folder.
