@@ -15,6 +15,17 @@ class A {
     };
   }
 
+  static prom(req, m){
+    return new Promise((r, j) => {
+      r({
+        data: `<h1>Ello Dimitri</h1>
+        <hr/>
+        Adrigà`,
+        head: {'Content-Type': 'text/html'}
+      });
+    });
+  }
+
   static nFound(req, m) {
     return {
       data: `<h1>So ya xpecting yer index?</h1>`,
@@ -28,6 +39,7 @@ class A {
 }
 Router.$("/hello", ['GET'], A.test);
 Router.$("/found", A.nFound);
+Router.$("/rape", ['GET'], A.prom);
 
 Router.when("/yolo/(.+)", ['GET'], (req, res, m) => {
   res.end(`Ya gotcha said under GET: ${m[1]}`);

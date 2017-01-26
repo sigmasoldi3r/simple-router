@@ -50,9 +50,13 @@ class Hook extends Route {
     super(regex, allow, callback);
   }
 
-  fire(req, res) {
-    const m = req.url.match(this.regex);
-    const r = this.callback(req, m);
+  /**
+   * Processes a return from a hook.
+   * @param {Object} r Response.
+   * @param {Request} req
+   * @param {Response} res
+   */
+  static processReturn(r, req, res){
     if (typeof r === 'object'){
       let code = r.code || 200;
       let head = r.head || {'Content-Type': 'plain/text'};
@@ -76,6 +80,23 @@ class Hook extends Route {
     }
   }
 
+  /**
+   * Fires the hook.
+   * @param {Request} req
+   * @param {Response} res
+   */
+  fire(req, res) {
+    const m = req.url.match(this.regex);
+    const r = this.callback(req, m);
+    if (r instanceof Promise) {
+      r.then((data) => {
+        Hook.processReturn(data, req, res);
+      });
+    } else {
+      Hook.processReturn(r, req, res);
+    }
+  }
+
 }
 
 /**
@@ -92,6 +113,9 @@ class Router {
  /**
   * Called when the router wants to handle an incoming connection.
   * If a route is matched, the callback is fired. As this simple.
+  * @param {RegExp} regex
+  * @param {Array} optMode Optional
+  * @param {Function} callback
   */
  when(regex, optMode, callback) {
    if (typeof callback === 'undefined') {
@@ -107,6 +131,9 @@ class Router {
 
  /**
   * This will register a new hook.
+  * @param {RegExp} regex
+  * @param {Array} optMode Optional
+  * @param {Function} callback
   */
  hook(regex, optMode, callback) {
    if (typeof callback === 'undefined') {
@@ -122,6 +149,9 @@ class Router {
 
  /**
   * Syntactic sugar for Router.hook(...);
+  * @param {RegExp} r
+  * @param {Array} o Optional
+  * @param {Function} c
   */
  $(r, o, c){
    this.hook(r, o, c);
@@ -129,6 +159,7 @@ class Router {
 
  /**
   * This is called if noone of the when routes has been matched.
+  * @param {Function} handler
   */
  finally(handler) {
    this.__final = handler;
@@ -136,6 +167,7 @@ class Router {
 
  /**
   * Sugar for finally.
+  * @param {Function} handler
   */
  final(handler){
    this.finally(handler);
@@ -144,6 +176,8 @@ class Router {
 
  /**
   * This applies all the registered routes to the incoming request.
+  * @param {Request} req
+  * @param {Response} res
   */
   listen(req, res) {
     let m = false;
