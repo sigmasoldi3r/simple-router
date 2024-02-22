@@ -13,7 +13,7 @@ dropped for now.
 
 # Basic usage
 ## Chaining method
-
+i have added tea pull request merge request
 You can include a router instance globally like:
 ```JS
 global.Router = require('Router');
